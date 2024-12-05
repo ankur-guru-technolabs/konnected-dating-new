@@ -1,0 +1,6 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/konnect1/konnectedlivesapp.com/konnected-dating
+    - /bin/cp -R * $DEPLOYPATH
+    - /bin/rm -f $DEPLOYPATH/.cpanel.yml
