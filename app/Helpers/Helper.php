@@ -10,7 +10,7 @@ use App\Models\UserSubscription;
 use App\Services\GooglePlayService;
 use Twilio\Rest\Client;
 use Google\Client as GoogleClient;
-use Auth;
+use Auth; 
 
 class Helper {
 
