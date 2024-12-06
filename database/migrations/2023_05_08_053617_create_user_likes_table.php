@@ -15,9 +15,9 @@ return new class extends Migration
     {
         Schema::create('user_likes', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('like_from')->index();
-            $table->unsignedBigInteger('like_to')->index();
-            $table->unsignedBigInteger('match_id')->nullable()->index();
+            $table->string('like_from')->index();
+            $table->string('like_to')->index();
+            $table->string('match_id')->nullable()->index();
             $table->tinyInteger('match_status')->default(2)->comment('0: unmatched, 1: matched, 2: nothing')->index();
             $table->tinyInteger('status')->nullable()->comment('0: dislike, 1: like')->index();
             $table->tinyInteger('can_chat')->default(1)->comment('0: No, 1: Yes')->index();

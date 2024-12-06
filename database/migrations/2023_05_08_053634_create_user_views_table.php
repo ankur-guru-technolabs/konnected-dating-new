@@ -15,8 +15,8 @@ return new class extends Migration
     {
         Schema::create('user_views', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('view_from')->index();
-            $table->unsignedBigInteger('view_to')->index();
+            $table->string('view_from')->index();
+            $table->string('view_to')->index();
             $table->timestamps();
         });
     }

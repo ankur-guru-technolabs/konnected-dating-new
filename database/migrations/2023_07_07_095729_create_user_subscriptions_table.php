@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('title');
             $table->text('description')->nullable();
             $table->text('search_filters')->nullable();
-            $table->integer('like_per_day')->nullable();
+            $table->string('like_per_day')->nullable();
             $table->string('video_call')->nullable();
             $table->string('who_like_me');
             $table->string('who_view_me');

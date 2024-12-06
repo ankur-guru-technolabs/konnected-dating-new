@@ -15,7 +15,7 @@ return new class extends Migration
     {
         Schema::create('sub_questions', function (Blueprint $table) {
             $table->id(); 
-            $table->bigInteger('question_id')->unsigned();
+            $table->string('question_id')->nullable();
             $table->text('option');
             $table->timestamps();
         });

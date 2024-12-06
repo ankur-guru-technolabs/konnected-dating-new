@@ -15,13 +15,13 @@ return new class extends Migration
     {
         Schema::create('notifications', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('sender_id')->index();
-            $table->unsignedBigInteger('receiver_id')->index();
+            $table->string('sender_id')->index();
+            $table->string('receiver_id')->index();
             $table->text('title');
             $table->string('type');
             $table->text('message');
             $table->text('data');
-            $table->tinyInteger('status')->nullable()->comment('0: unread, 1: read')->index();
+            $table->string('status')->nullable()->comment('0: unread, 1: read')->index();
             $table->timestamps();
         });
     }

@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('title');
             $table->text('description')->nullable();
             $table->text('search_filters')->nullable();
-            $table->integer('like_per_day')->nullable();
+            $table->string('like_per_day')->nullable();
             $table->string('video_call')->nullable();
             $table->string('who_like_me');
             $table->string('who_view_me');
@@ -30,8 +30,8 @@ return new class extends Migration
             // $table->string('coin');
             $table->string('price');
             // $table->string('currency_code');
-            $table->integer('month');
-            $table->integer('plan_duration')->nullable();
+            $table->string('month');
+            $table->string('plan_duration')->nullable();
             $table->string('plan_type')->nullable();
             $table->string('google_plan_id')->nullable();
             $table->string('apple_plan_id')->nullable();

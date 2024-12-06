@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\UserSubscription;
 use App\Services\GooglePlayService;
 use Twilio\Rest\Client;
+use Google\Client as GoogleClient;
 use Auth;
 
 class Helper {
@@ -38,7 +39,6 @@ class Helper {
         }elseif (isset($data['subscription_expire'])) {
             Mail::to($data['email'])->send(new SubscriptionExpireMail($data));
         }
-        
         return true;
 
     }
@@ -57,7 +57,178 @@ class Helper {
         return true;
     }
 
+    public static function getAccessToken($serviceAccountPath) {
+        $client = new GoogleClient();
+        $client->setAuthConfig($serviceAccountPath);
+        $client->addScope('https://www.googleapis.com/auth/firebase.messaging');
+        $client->useApplicationDefaultCredentials();
+        $token = $client->fetchAccessTokenWithAssertion();
+        return $token['access_token'];
+    }
+
+    public static function sendMessage($accessToken, $projectId, $message) {
+        $url = 'https://fcm.googleapis.com/v1/projects/' . $projectId . '/messages:send';
+        $headers = [
+         'Authorization: Bearer ' . $accessToken,
+         'Content-Type: application/json',
+        ];
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['message' => $message]));
+        $response = curl_exec($ch);
+        if ($response === false) {
+            throw new Exception('Curl error: ' . curl_error($ch));
+        }
+        curl_close($ch);
+        return json_decode($response, true);
+    }
+
     public static function send_notification($notification_id, $sender_id = '', $receiver_id = '', $title = '', $type = '', $message = '', $custom = [])
+    {
+        $receiver_data = User::where('id', $receiver_id)->first();
+
+        if ($notification_id == 'single') {
+            $notification_id = [$receiver_data->fcm_token];
+        }
+       
+        // This will give old badges count which is already stored...
+
+        $badge = Notification::where('receiver_id', $receiver_id)->where(function ($query) {
+            $query->where('type', 'message');
+            $query->orWhere('type', 'video_call');
+        })->where('status', 0)->count();
+
+        // If new arriving notification is also for message,video_call then need to add +1 in old count
+
+        if ($type == 'message' || $type == 'video_call') {
+            $badge = $badge + 1;
+        }
+
+        if (isset($custom['image'])) {
+            $image = $custom['image'];
+        } else {
+            $image = asset('images/konnected-dating.png');
+        }
+
+        $messages = $message;
+        if (!empty($receiver_data) && $receiver_data->is_notification_mute == 0 && $receiver_data->fcm_token != '') {
+            $accesstoken = env('FCM_KEY');
+ 
+            $message = [
+                "token" => $notification_id[0],
+                'notification' => [
+                    "title" => $title,
+                   // "body" => $messages,  
+                    "image" => $image,
+                ],
+                'data' => [
+                    "title" => $title,
+                   // "body" => $messages,  
+                    "type" => $type,
+                    "sender_id" => (string)$sender_id,
+                    "receiver_id" => (string)$receiver_id,
+                    "custom" => !empty($custom) ? json_encode($custom) : null,
+                    "image" => $image,
+                    "badge" => (string)$badge,
+                ],
+            ];
+
+            $serviceAccountPath = '../konnected-35755-firebase-adminsdk-ait1g-eced09525e.json';
+            $projectId = 'konnected-35755';
+
+            $accessToken = Helper::getAccessToken($serviceAccountPath);
+            if(!empty($accessToken) && $accessToken !== ''){
+                $response = Helper::sendMessage($accessToken, $projectId, $message);
+            };
+        }
+        $input['sender_id']     = $sender_id;
+        $input['receiver_id']   = $receiver_id;
+        $input['title']         = $title;
+        $input['type']          = $type;
+        $input['message']       = $messages;
+        $input['status']        = 0;
+        $input['data']          = json_encode($custom);
+
+        $notification_data      = Notification::create($input);
+        return true;
+    }
+
+     public static function send_notification_by_admin($title = '',  $message = '', $custom = [])
+    {
+        $receivers = User::where('is_notification_mute', 0)
+                    ->where('status',1)
+                    ->whereNotNull('fcm_token')
+                    ->get();
+
+        $registration_ids = $receivers->pluck('fcm_token')->toArray();
+        $receiverIds = $receivers->pluck('id')->toArray();
+        
+        if (empty($registration_ids)) {
+            return false;  
+        }
+
+        if (isset($custom['image'])) {
+            $image = $custom['image'];
+        } else {
+            $image = asset('images/konnected-dating.png');
+        }
+
+        $messages = $message;
+
+        $accesstoken = env('FCM_KEY');
+        $serviceAccountPath = '../konnected-35755-firebase-adminsdk-ait1g-eced09525e.json';
+        $projectId = 'konnected-35755';
+
+        $accessToken = Helper::getAccessToken($serviceAccountPath);
+
+        if(!empty($accessToken) && $accessToken !== ''){ 
+            foreach ($registration_ids as $token) {
+                $message = [
+                    "token" => $token,
+                    'notification' => [
+                        "title" => $title,
+                        "body" => $messages,
+                        "image" => $image
+                    ],
+                    'data' => [
+                        "title" => $title,
+                        "body" => $messages,
+                        "type" => 'admin_notificaion',
+                        "sender_id" => '1', // Convert to string
+                        "receiver_id" => '0', // Convert to string
+                        "custom" => !empty($custom) ? json_encode($custom) : null,
+                        "image" => $image,
+                        "badge" => (string)0, 
+                    ],
+                ];
+    
+                $response = Helper::sendMessage($accessToken, $projectId, $message);
+            }
+        };
+        $commonNotificationData = [
+            'sender_id' => 1,
+            'title' => $title,
+            'type' => 'admin_notificaion',
+            'message' => $messages,
+            'status' => 0,
+            'data' => json_encode($custom),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
+
+        $notificationData = array_map(function ($receiverId) use ($commonNotificationData) {
+            return array_merge(['receiver_id' => $receiverId], $commonNotificationData);
+        }, $receiverIds);
+
+        Notification::insert($notificationData);
+        
+        return true;
+    }
+
+    public static function send_notificationOld($notification_id, $sender_id = '', $receiver_id = '', $title = '', $type = '', $message = '', $custom = [])
     {
         $receiver_data = User::where('id', $receiver_id)->first();
 
@@ -139,7 +310,7 @@ class Helper {
         return true;
     }
 
-    public static function send_notification_by_admin($title = '',  $message = '', $custom = [])
+    public static function send_notification_by_adminOld($title = '',  $message = '', $custom = [])
     {
         // Fetch all users in chunks
         User::chunk(1000, function ($users) use ($title, $message,$custom) {
