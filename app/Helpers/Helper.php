@@ -144,15 +144,17 @@ class Helper {
                 $response = Helper::sendMessage($accessToken, $projectId, $message);
             };
         }
-        $input['sender_id']     = $sender_id;
-        $input['receiver_id']   = $receiver_id;
-        $input['title']         = $title;
-        $input['type']          = $type;
-        $input['message']       = $messages;
-        $input['status']        = 0;
-        $input['data']          = json_encode($custom);
-
-        $notification_data      = Notification::create($input);
+        if ($type !== 'message' || $type !== 'video_call') {
+            $input['sender_id']     = $sender_id;
+            $input['receiver_id']   = $receiver_id;
+            $input['title']         = $title;
+            $input['type']          = $type;
+            $input['message']       = $messages;
+            $input['status']        = 0;
+            $input['data']          = json_encode($custom);
+    
+            $notification_data      = Notification::create($input);
+        }
         return true;
     }
 
