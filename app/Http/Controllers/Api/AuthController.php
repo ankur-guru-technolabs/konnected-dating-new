@@ -15,6 +15,7 @@ use App\Models\Height;
 use App\Models\Hobby;
 use App\Models\Industry;
 use App\Models\Icebreaker;
+use App\Models\OtpCount;
 use App\Models\Question;
 use App\Models\Salary;
 use App\Models\Temp;
@@ -92,6 +93,10 @@ class AuthController extends BaseController
                     $data['is_user_exist'] = 1;
                 }
                 if(!in_array($request->phone_no,$temp_number)){
+                    $otpRecord = OtpCount::where('phone_number', $request->phone_no)->where('date', date('Y-m-d'))->first();
+                    if (!empty($otpRecord) && $otpRecord->count == 3) {
+                        return $this->error('You have reached maximum limit of otp','You have reached maximum limit of otp');
+                    }  
                     Helper::sendOtp($key,$otp);
                 }
                 $data['send_in'] = 'phone_no'; 

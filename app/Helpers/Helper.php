@@ -5,6 +5,7 @@ use Mail;
 use App\Mail\EmailVerificationMail;
 use App\Mail\SubscriptionExpireMail;
 use App\Models\Notification;
+use App\Models\OtpCount;
 use App\Models\User;
 use App\Models\UserSubscription;
 use App\Services\GooglePlayService;
@@ -54,6 +55,23 @@ class Helper {
         $message = "Your konnected otp is ". $otp;
         $client = new Client($account_sid, $auth_token);
         $client->messages->create($number,['from' => $twilio_number, 'body' => $message] );
+
+        $otpRecord = OtpCount::where('phone_number', $number)->where('date', date('Y-m-d'))->first();
+         
+        if ($otpRecord) {
+            $otpRecord->update([
+                'otp' => $otp,
+                'count' => $otpRecord->count + 1,
+                'date' => date('Y-m-d'),
+            ]);
+        } else {
+            OtpCount::create([
+                'phone_number' => $number,
+                'otp' => $otp,
+                'count' => 1,
+                'date' => date('Y-m-d'),
+            ]);
+        }
         return true;
     }
 
@@ -144,7 +162,7 @@ class Helper {
                 $response = Helper::sendMessage($accessToken, $projectId, $message);
             };
         }
-        if ($type !== 'message' || $type !== 'video_call') {
+        if ($type !== 'message' && $type !== 'video_call') {
             $input['sender_id']     = $sender_id;
             $input['receiver_id']   = $receiver_id;
             $input['title']         = $title;
